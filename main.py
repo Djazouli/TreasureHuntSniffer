@@ -50,6 +50,7 @@ def manage_message(msg):
             chasse = Chasse(map.id2pos(msg['startMapId']), current_map, msg["knownStepsList"])
         else:
             if len(msg["knownStepsList"]) == test_reminder:
+                # Because you receive a message before clicking on the magnifier
                 return
             chasse.add_step(current_map, msg["knownStepsList"][-1])
             test_reminder = len(msg["knownStepsList"])

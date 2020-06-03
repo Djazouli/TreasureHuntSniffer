@@ -1,3 +1,5 @@
 .idea
 protocol.pk
 venv
+protocol
+__pycache__
