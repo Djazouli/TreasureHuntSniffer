@@ -1,4 +1,3 @@
-import pyshark
 import logging
 
 from utils.map_convert import Mapper
@@ -9,8 +8,6 @@ from labot.sniffer.network import launch_in_thread
 logging.basicConfig(level=logging.FATAL)
 
 logger = logging.getLogger("main")
-
-capture = pyshark.LiveCapture(interface="en7", bpf_filter='tcp port 5555 and len > 66')
 
 
 def log_message(msg):
