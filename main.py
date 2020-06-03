@@ -6,40 +6,40 @@ from decoder.PacketParser import PacketParser
 from utils.map_convert import Mapper
 from chasse.Chasse import Chasse
 from chasse.Hint import HintType
+from labot.sniffer.network import launch_in_thread
 
-logging.basicConfig(level=logging.FATAL)
+logging.basicConfig(level=logging.DEBUG)
 
 logger = logging.getLogger("main")
 
 capture = pyshark.LiveCapture(interface="en7", bpf_filter='tcp port 5555 and len > 66')
 
 
-def log_message(msg, from_client):
-    if from_client:
-        logger.info("Paquet Dofus Envoyé")
-    else:
-        logger.info("Paquet Dofus Reçu")
+def log_message(msg):
     logger.info(msg)
 
 map = Mapper()
-parser = PacketParser()
 current_map = None
 chasse = None
 
 test_reminder = None
 
-for packet in capture.sniff_continuously():
-    from_client, msg = parser.parse_packet(packet)
-    if msg is None:
-        continue
 
+
+def manage_message(msg):
+    global map
+    global parser
+    global current_map
+    global test_reminder
+    global chasse
+    msg = msg.json()
     if msg["__type__"] in {"ChatServerMessage", "ChatServerWithObjectMessage", "GameMapMovementMessage"}:
-        continue
-    log_message(msg, from_client)
+        return
+    log_message(msg)
 
     if msg["__type__"] == "CurrentMapMessage":
         current_map = map.id2pos(msg['mapId'])
-        continue
+        return
     if msg["__type__"] == "MapComplementaryInformationsDataMessage":
         # look for phorreur
         for actor in msg.get("actors", []):
@@ -49,12 +49,12 @@ for packet in capture.sniff_continuously():
     if msg["__type__"] == "TreasureHuntMessage":
         if len(msg["knownStepsList"]) == 1 and msg['knownStepsList'][0].get('__type__') == 'TreasureHuntStepFight':
             print("Fighting time!")
-            continue
+            return
         if chasse is None:
             chasse = Chasse(map.id2pos(msg['startMapId']), current_map, msg["knownStepsList"])
         else:
             if len(msg["knownStepsList"]) == test_reminder:
-                continue
+                return
             chasse.add_step(current_map, msg["knownStepsList"][-1])
             test_reminder = len(msg["knownStepsList"])
         if chasse.next_hint.hint_type == HintType.NPC:
@@ -66,3 +66,4 @@ for packet in capture.sniff_continuously():
         chasse = None
 
 
+launch_in_thread(manage_message)
