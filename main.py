@@ -1,14 +1,12 @@
 import pyshark
 import logging
 
-
-from decoder.PacketParser import PacketParser
 from utils.map_convert import Mapper
 from chasse.Chasse import Chasse
 from chasse.Hint import HintType
 from labot.sniffer.network import launch_in_thread
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.FATAL)
 
 logger = logging.getLogger("main")
 
@@ -28,7 +26,6 @@ test_reminder = None
 
 def manage_message(msg):
     global map
-    global parser
     global current_map
     global test_reminder
     global chasse
@@ -40,13 +37,12 @@ def manage_message(msg):
     if msg["__type__"] == "CurrentMapMessage":
         current_map = map.id2pos(msg['mapId'])
         return
-    if msg["__type__"] == "MapComplementaryInformationsDataMessage":
+    elif msg["__type__"] == "MapComplementaryInformationsDataMessage":
         # look for phorreur
         for actor in msg.get("actors", []):
             if actor.get("__type__") == "GameRolePlayTreasureHintInformations" and chasse is not None and chasse.next_hint.base_id == actor.get('npcId'):
                 print(f"Found phorreur in {current_map}")
-        pass
-    if msg["__type__"] == "TreasureHuntMessage":
+    elif msg["__type__"] == "TreasureHuntMessage":
         if len(msg["knownStepsList"]) == 1 and msg['knownStepsList'][0].get('__type__') == 'TreasureHuntStepFight':
             print("Fighting time!")
             return
@@ -61,9 +57,12 @@ def manage_message(msg):
             print("Next hint is a phorreur, I'll tell you when we get there.")
         else:
             print(f"You have to aim towards {chasse.next_hint.get_position()}")
-    if msg["__type__"] == "GameFightEndMessage" and chasse is not None:
+
+    elif msg["__type__"] == "TreasureHuntFinishedMessage" and chasse is not None:
         print(f"Took {chasse.end()} seconds")
         chasse = None
+
+    # Number of chest may be in TreasureHuntDigRequestAnswerMessage, key "result"
 
 
 launch_in_thread(manage_message)
